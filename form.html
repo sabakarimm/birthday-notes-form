@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>upcoming</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#F4F1EA;color:#07080D}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.w{max-width:28rem;margin:0 auto;padding:28px 20px 40px}
+.b{font-weight:600;margin-bottom:28px}
+h1{font-size:clamp(1.5rem,5vw,2rem);color:#C48A2A;margin:0 0 16px}
+.l{font-size:15px;margin:0 0 18px}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}
+textarea,input{width:100%;border:1px solid rgba(7,8,13,.16);background:#fff;border-radius:14px;font:inherit;padding:14px}
+textarea{min-height:140px;resize:vertical}
+button{display:block;width:100%;min-height:48px;margin-top:18px;border:0;border-radius:14px;background:#07080D;color:#F4F1EA;font:inherit;font-weight:700;cursor:pointer}
+.m{color:#6F6B63;font-size:14px;margin-top:14px}
+.err{color:#a33;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="w">
+<div class="b">upcoming</div>
+<div id="app"><p class="m">Loading…</p></div>
+</div>
+<script>
+const API="https://fmtszjjyadmvvlviecmd.supabase.co/functions/v1/birthday-notes";
+const t=(location.pathname.match(/^\/n\/([^\/]+)/)||[])[1]||new URLSearchParams(location.search).get("t")||"";
+const app=document.getElementById("app");
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+async function load(){
+  if(!t){app.innerHTML='<p class="err">Missing link.</p>';return;}
+  const r=await fetch(API+"/api/public/"+encodeURIComponent(t));
+  if(!r.ok){app.innerHTML='<p class="err">This link isn\'t working.</p>';return;}
+  const d=await r.json();
+  if(d.alreadySent){app.innerHTML='<p>You already sent this.</p><p class="m">'+esc(d.firstName)+' reads it on their birthday.</p>';return;}
+  if(d.closed){app.innerHTML='<p>This one\'s closed.</p>';return;}
+  app.innerHTML='<p class="l">A note for '+esc(d.firstName)+'</p><h1>'+esc(d.prompt)+'</h1><form id="f"><label for="body">Your note</label><textarea id="body" name="body" maxlength="300" required></textarea><label for="name">Your name</label><input id="name" name="name" type="text" maxlength="80" required autocomplete="name" value="'+esc(d.friendLabel||'')+'"><button type="submit">Send to '+esc(d.firstName)+'</button><p class="m">'+esc(d.firstName)+' will read it on their birthday. Not before.</p><p class="err" id="e" hidden></p></form>';
+  document.getElementById("f").onsubmit=async(ev)=>{
+    ev.preventDefault();
+    const e=document.getElementById("e");
+    e.hidden=true;
+    const name=document.getElementById("name").value.trim();
+    const body=document.getElementById("body").value.trim();
+    const res=await fetch(API+"/api/public/"+encodeURIComponent(t),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,body})});
+    if(res.ok){app.innerHTML='<p>Sent to '+esc(d.firstName)+'.</p><p class="m">They\'ll read it on their birthday.</p>';return;}
+    e.textContent="Couldn’t send. Try again.";e.hidden=false;
+  };
+}
+load().catch(()=>{app.innerHTML='<p class="err">Couldn’t load.</p>';});
+</script>
+</body>
+</html>
